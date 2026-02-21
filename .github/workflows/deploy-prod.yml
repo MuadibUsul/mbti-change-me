@@ -78,9 +78,13 @@ jobs:
             IMAGE="${{ needs.build-and-push.outputs.image }}"
             APP_PORT="${{ secrets.APP_PORT }}"
             APP_NAME="${{ secrets.APP_NAME }}"
+            BIND_HOST="${{ secrets.BIND_HOST }}"
 
             if [ -z "${APP_NAME:-}" ]; then
               APP_NAME="mbtichange"
+            fi
+            if [ -z "${BIND_HOST:-}" ]; then
+              BIND_HOST="127.0.0.1"
             fi
 
             mkdir -p "$APP_DIR"
@@ -112,7 +116,7 @@ jobs:
                   db:
                     condition: service_healthy
                 ports:
-                  - "127.0.0.1:${APP_PORT:-3001}:3000"
+                  - "${BIND_HOST:-127.0.0.1}:${APP_PORT:-3001}:3000"
                 healthcheck:
                   test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
                   interval: 30s
@@ -131,7 +135,7 @@ jobs:
             . ./.env.production
             set +a
 
-            export IMAGE APP_PORT APP_NAME
+            export IMAGE APP_PORT APP_NAME BIND_HOST
             export COMPOSE_PROJECT_NAME="${APP_NAME}"
 
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
