@@ -106,19 +106,19 @@ jobs:
             mkdir -p "$APP_DIR"
             cd "$APP_DIR"
 
-            cat > docker-compose.prod.yml <<YAML
+            cat > docker-compose.prod.yml <<'YAML'
             services:
               db:
                 image: postgres:16-alpine
                 restart: unless-stopped
                 environment:
-                  POSTGRES_USER: ${DB_USER}
-                  POSTGRES_PASSWORD: ${DB_PASSWORD}
-                  POSTGRES_DB: ${DB_NAME}
+                  POSTGRES_USER: "${DB_USER:-mbti}"
+                  POSTGRES_PASSWORD: "${DB_PASSWORD:-mbti-change-password}"
+                  POSTGRES_DB: "${DB_NAME:-mbtichange}"
                 volumes:
                   - postgres_data:/var/lib/postgresql/data
                 healthcheck:
-                  test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+                  test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-mbti} -d ${DB_NAME:-mbtichange}"]
                   interval: 10s
                   timeout: 5s
                   retries: 10
@@ -132,7 +132,7 @@ jobs:
                   db:
                     condition: service_healthy
                 ports:
-                  - "${BIND_HOST}:${APP_PORT}:3000"
+                  - "${BIND_HOST:-127.0.0.1}:${APP_PORT:-3001}:3000"
                 healthcheck:
                   test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
                   interval: 30s
@@ -156,6 +156,9 @@ jobs:
 
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+            echo "---- docker-compose.prod.yml ----"
+            nl -ba docker-compose.prod.yml | sed -n '1,120p'
+            echo "---- end docker-compose.prod.yml ----"
             docker compose -f docker-compose.prod.yml config -q
             docker compose -f docker-compose.prod.yml up -d db
             docker compose -f docker-compose.prod.yml pull web
