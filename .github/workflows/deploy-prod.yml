@@ -83,6 +83,9 @@ jobs:
             APP_PORT="${{ secrets.APP_PORT }}"
             APP_NAME="${{ secrets.APP_NAME }}"
             BIND_HOST="${{ secrets.BIND_HOST }}"
+            DB_USER="${{ secrets.DB_USER }}"
+            DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            DB_NAME="${{ secrets.DB_NAME }}"
 
             if [ -z "${APP_NAME:-}" ]; then
               APP_NAME="mbtichange"
@@ -90,29 +93,38 @@ jobs:
             if [ -z "${BIND_HOST:-}" ]; then
               BIND_HOST="127.0.0.1"
             fi
+            if [ -z "${DB_USER:-}" ]; then
+              DB_USER="mbti"
+            fi
+            if [ -z "${DB_PASSWORD:-}" ]; then
+              DB_PASSWORD="mbti-change-password"
+            fi
+            if [ -z "${DB_NAME:-}" ]; then
+              DB_NAME="mbtichange"
+            fi
 
             mkdir -p "$APP_DIR"
             cd "$APP_DIR"
 
-            cat > docker-compose.prod.yml <<'YAML'
+            cat > docker-compose.prod.yml <<YAML
             services:
               db:
                 image: postgres:16-alpine
                 restart: unless-stopped
                 environment:
-                  POSTGRES_USER: ${DB_USER:-mbti}
-                  POSTGRES_PASSWORD: ${DB_PASSWORD:-mbti-change-password}
-                  POSTGRES_DB: ${DB_NAME:-mbtichange}
+                  POSTGRES_USER: ${DB_USER}
+                  POSTGRES_PASSWORD: ${DB_PASSWORD}
+                  POSTGRES_DB: ${DB_NAME}
                 volumes:
                   - postgres_data:/var/lib/postgresql/data
                 healthcheck:
-                  test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-mbti} -d ${DB_NAME:-mbtichange}"]
+                  test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
                   interval: 10s
                   timeout: 5s
                   retries: 10
 
               web:
-                image: ${IMAGE}
+                image: "${IMAGE}"
                 restart: unless-stopped
                 env_file:
                   - .env.production
@@ -120,7 +132,7 @@ jobs:
                   db:
                     condition: service_healthy
                 ports:
-                  - "${BIND_HOST:-127.0.0.1}:${APP_PORT:-3001}:3000"
+                  - "${BIND_HOST}:${APP_PORT}:3000"
                 healthcheck:
                   test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
                   interval: 30s
@@ -139,11 +151,12 @@ jobs:
             . ./.env.production
             set +a
 
-            export IMAGE APP_PORT APP_NAME BIND_HOST
+            export IMAGE APP_PORT APP_NAME BIND_HOST DB_USER DB_PASSWORD DB_NAME
             export COMPOSE_PROJECT_NAME="${APP_NAME}"
 
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+            docker compose -f docker-compose.prod.yml config -q
             docker compose -f docker-compose.prod.yml up -d db
             docker compose -f docker-compose.prod.yml pull web
             docker compose -f docker-compose.prod.yml run --rm web npx prisma migrate deploy
