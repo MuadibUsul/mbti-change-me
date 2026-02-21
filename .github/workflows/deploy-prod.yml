@@ -88,11 +88,29 @@ jobs:
 
             cat > docker-compose.prod.yml <<'YAML'
             services:
+              db:
+                image: postgres:16-alpine
+                restart: unless-stopped
+                environment:
+                  POSTGRES_USER: ${DB_USER:-mbti}
+                  POSTGRES_PASSWORD: ${DB_PASSWORD:-mbti-change-password}
+                  POSTGRES_DB: ${DB_NAME:-mbtichange}
+                volumes:
+                  - postgres_data:/var/lib/postgresql/data
+                healthcheck:
+                  test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-mbti} -d ${DB_NAME:-mbtichange}"]
+                  interval: 10s
+                  timeout: 5s
+                  retries: 10
+
               web:
                 image: ${IMAGE}
                 restart: unless-stopped
                 env_file:
                   - .env.production
+                depends_on:
+                  db:
+                    condition: service_healthy
                 ports:
                   - "127.0.0.1:${APP_PORT:-3001}:3000"
                 healthcheck:
@@ -100,17 +118,25 @@ jobs:
                   interval: 30s
                   timeout: 5s
                   retries: 5
+
+            volumes:
+              postgres_data:
             YAML
 
             cat > .env.production <<'ENVFILE'
             ${{ secrets.APP_ENV }}
             ENVFILE
 
+            set -a
+            . ./.env.production
+            set +a
+
             export IMAGE APP_PORT APP_NAME
             export COMPOSE_PROJECT_NAME="${APP_NAME}"
 
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+            docker compose -f docker-compose.prod.yml up -d db
             docker compose -f docker-compose.prod.yml pull web
             docker compose -f docker-compose.prod.yml run --rm web npx prisma migrate deploy
             docker compose -f docker-compose.prod.yml up -d web
