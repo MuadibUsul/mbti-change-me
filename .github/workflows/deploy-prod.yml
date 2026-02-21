@@ -18,6 +18,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Normalize GHCR owner
+        id: owner
+        run: echo "value=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -38,7 +42,7 @@ jobs:
 
       - name: Set image meta
         id: meta
-        run: echo "image=ghcr.io/${{ github.repository_owner }}/mbtichange:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+        run: echo "image=ghcr.io/${{ steps.owner.outputs.value }}/mbtichange:${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -56,8 +60,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/mbtichange:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/mbtichange:latest
+            ghcr.io/${{ steps.owner.outputs.value }}/mbtichange:${{ github.sha }}
+            ghcr.io/${{ steps.owner.outputs.value }}/mbtichange:latest
 
   deploy:
     runs-on: ubuntu-latest
