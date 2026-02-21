@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local runtime artifacts
+dev.log
+initdb.log
+.pg_local.log
+.pgdata/
+character_assets/generated/
+character_assets/.verify/
+public/generated-characters/

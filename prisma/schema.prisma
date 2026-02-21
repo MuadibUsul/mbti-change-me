@@ -1,0 +1,194 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SessionStatus {
+  DRAFT
+  COMPLETED
+}
+
+enum Dimension {
+  EI
+  SN
+  TF
+  JP
+}
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  name         String?
+  passwordHash String
+  styleDNA     Json?          @db.JsonB
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  testSessions TestSession[]
+  answers      Answer[]
+  avatarTokens AvatarToken[]
+  mentorAdvice MentorAdvice[]
+  trafficEvents TrafficEvent[]
+}
+
+model EmailVerificationCode {
+  id         String   @id @default(cuid())
+  email      String
+  codeHash   String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([email, createdAt(sort: Desc)])
+  @@index([email, consumedAt, expiresAt])
+}
+
+model TestSession {
+  id                String           @id @default(cuid())
+  userId            String
+  status            SessionStatus    @default(DRAFT)
+  questionCount     Int
+  mbtiType          String?
+  startedAt         DateTime         @default(now())
+  completedAt       DateTime?
+  completionSeconds Int?
+  behaviorStats     Json?            @db.JsonB
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions         Question[]
+  answers           Answer[]
+  dimensionScores   DimensionScore[]
+  avatarToken       AvatarToken?
+  mentorAdvice      MentorAdvice?
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model Question {
+  id             String      @id @default(cuid())
+  sessionId      String
+  orderIndex     Int
+  text           String
+  dimension      Dimension
+  direction      Int
+  reverseScoring Boolean     @default(false)
+  choices        Json        @db.JsonB
+  createdAt      DateTime    @default(now())
+  session        TestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  answers        Answer[]
+
+  @@unique([sessionId, orderIndex])
+  @@index([sessionId, dimension])
+}
+
+model Answer {
+  id          String      @id @default(cuid())
+  sessionId   String
+  questionId  String
+  userId      String
+  choice      Int
+  mappedValue Int
+  elapsedMs   Int?
+  createdAt   DateTime    @default(now())
+  session     TestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question    Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, questionId])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model DimensionScore {
+  id              String      @id @default(cuid())
+  sessionId       String
+  dimension       Dimension
+  rawScore        Float
+  normalizedScore Float
+  letter          String
+  createdAt       DateTime    @default(now())
+  session         TestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, dimension])
+}
+
+model AvatarToken {
+  id             String      @id @default(cuid())
+  userId         String
+  sessionId      String      @unique
+  tokenIndex     Int
+  seed           String
+  regions        Json        @db.JsonB
+  regionColors   Json        @db.JsonB
+  textureOverlay String
+  derivedStats   Json        @db.JsonB
+  svg            String      @db.Text
+  generatedAt    DateTime    @default(now())
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session        TestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tokenIndex])
+  @@index([userId, generatedAt(sort: Desc)])
+}
+
+model MentorAdvice {
+  id                 String      @id @default(cuid())
+  userId             String
+  sessionId          String      @unique
+  insights           Json        @db.JsonB
+  actionSuggestions  Json        @db.JsonB
+  reflectionQuestion String
+  microPlan          Json        @db.JsonB
+  generatedAt        DateTime    @default(now())
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session            TestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, generatedAt(sort: Desc)])
+}
+
+enum PaymentChannel {
+  WECHAT
+  ALIPAY
+  DOUYIN
+  STRIPE
+  PAYPAL
+  BANK
+  CUSTOM
+}
+
+model PaymentBinding {
+  id           String         @id @default(cuid())
+  channel      PaymentChannel
+  displayName  String
+  accountName  String?
+  accountRef   String?
+  qrCodeUrl    String?
+  instructions String?
+  enabled      Boolean        @default(true)
+  config       Json?          @db.JsonB
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([channel, enabled])
+  @@index([updatedAt(sort: Desc)])
+}
+
+model TrafficEvent {
+  id         String   @id @default(cuid())
+  path       String
+  referrer   String?
+  userAgent  String?
+  sessionKey String?
+  ipHash     String?
+  userId     String?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([path, createdAt(sort: Desc)])
+  @@index([sessionKey, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+}

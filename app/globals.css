@@ -1,26 +1,153 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-primary: hsl(22 74% 60%);
+  --color-secondary: hsl(164 44% 48%);
+  --color-accent: hsl(348 70% 66%);
+  --color-bg: hsl(28 28% 16%);
+  --color-surface: hsl(38 34% 92%);
+  --color-glow: hsl(32 84% 72%);
+  --gradient-a: hsl(24 78% 62%);
+  --gradient-b: hsl(162 42% 47%);
+  --gradient-c: hsl(348 68% 67%);
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 26px;
+  --clip-panel: inset(0 round var(--radius-lg));
+  --surface-border: 1px solid rgba(255, 255, 255, 0.2);
+  --shadow-soft: 0 14px 36px rgba(0, 0, 0, 0.2);
+  --shadow-strong: 0 25px 68px rgba(0, 0, 0, 0.28);
+  --shadow-split: 0 0 0 transparent;
+  --glass-alpha: 0.58;
+  --blur-amount: 24px;
+  --tracking-main: 0.01em;
+  --tracking-heading: 0.02em;
+  --flow-duration: 16s;
+  --font-main: var(--font-geo), sans-serif;
+  --motion-speed: 1;
+  --float-intensity: 0.26;
+  --noise-opacity: 0.06;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-surface);
+  --font-sans: var(--font-main);
+  --font-mono: var(--font-code);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background:
+    radial-gradient(circle at 10% -10%, color-mix(in oklab, var(--color-primary) 22%, transparent) 0%, transparent 42%),
+    radial-gradient(circle at 90% 0%, color-mix(in oklab, var(--color-accent) 18%, transparent) 0%, transparent 36%),
+    var(--color-bg);
+  color: var(--color-surface);
+  font-family: var(--font-main), "Segoe UI", sans-serif;
+  letter-spacing: var(--tracking-main);
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-glow) 42%, transparent);
+  color: var(--color-surface);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+[data-shape="sharp"] .shape-sensitive {
+  clip-path: polygon(0 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px));
+}
+
+.hero-title {
+  letter-spacing: var(--tracking-heading);
+  font-variation-settings: "wght" 650;
+  background: linear-gradient(100deg, var(--color-surface) 15%, var(--color-glow) 45%, var(--color-surface) 88%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: title-flow calc(var(--flow-duration) * 0.8) linear infinite;
+}
+
+input,
+textarea,
+select {
+  color: var(--color-surface);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: color-mix(in oklab, var(--color-surface) 54%, transparent);
+}
+
+select option {
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+.glass-panel {
+  background: color-mix(in oklab, var(--color-surface) calc(var(--glass-alpha) * 100%), transparent);
+  border: var(--surface-border);
+  box-shadow: var(--shadow-soft);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(var(--blur-amount));
+}
+
+.breath {
+  animation: breath calc(6s / var(--motion-speed)) ease-in-out infinite;
+}
+
+.split-bg-linear {
+  background:
+    linear-gradient(110deg, color-mix(in oklab, var(--gradient-a) 38%, transparent) 0%, transparent 35%),
+    linear-gradient(286deg, color-mix(in oklab, var(--gradient-c) 40%, transparent) 0%, transparent 45%);
+}
+
+.split-bg-radial {
+  background:
+    radial-gradient(circle at 24% 18%, color-mix(in oklab, var(--gradient-a) 36%, transparent) 0%, transparent 45%),
+    radial-gradient(circle at 78% 14%, color-mix(in oklab, var(--gradient-c) 42%, transparent) 0%, transparent 40%);
+}
+
+@keyframes title-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@keyframes breath {
+  0%,
+  100% {
+    transform: translateZ(0);
+    filter: brightness(1);
+  }
+  50% {
+    transform: translateZ(0) scale(1.01);
+    filter: brightness(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
